@@ -1,0 +1,39 @@
+name: Publish to aws lambda
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Create env file
+        run: |
+          touch .env
+          echo LOG_FORMAT=${{ secrets.LOG_FORMAT }} >> .env
+          echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
+          echo CREDENTIALS=${{ secrets.CREDENTIALS }} >> .env
+          echo ORIGIN=${{ secrets.ORIGIN }} >> .env
+          echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
+          echo PORT=${{ secrets.PORT }} >> .env
+      - run: npm ci
+      - run: npm run build
+      - run: npm run prisma:deploy
+        env:
+          LOG_FORMAT: ${{ secrets.LOG_FORMAT }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PORT: ${{ secrets.PORT }}
+          CREDENTIALS: ${{ secrets.CREDENTIALS }}
+          ORIGIN: ${{ secrets.ORIGIN }}
