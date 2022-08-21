@@ -1,0 +1,62 @@
+service: bitmarte-shipping
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: dev
+  region: eu-west-1
+
+  environment:
+    LOG_FORMAT: ${env:LOG_FORMAT}
+    ORIGIN: ${env:ORIGIN}
+    CREDENTIALS: ${env:CREDENTIALS}
+    JWT_SECRET: ${env:JWT_SECRET}
+    DATABASE_URL: ${env:JWT_SECRET}
+    PORT: ${env:PORT}
+
+functions:
+  api:
+    handler: dist/index.handler
+    layers:
+      - { Ref: PrismaLambdaLayer }
+    events:
+      - httpApi: '*'
+
+useDotenv: true
+
+plugins:
+  - serverless-webpack-prisma
+  - serverless-plugin-optimize
+  - serverless-offline
+  - serverless-scriptable-plugin
+  - serverless-dotenv-plugin
+
+custom:
+  webpack:
+    includeModules: true
+  scriptable:
+    hooks:
+      'package:initialize': 'sh ./ci/create-prisma-layer.sh'
+layers:
+  prisma:
+    path: .prisma-layer
+    description: 'Layer for Prisma Clients'
+    package:
+      patterns:
+        - '!nodejs/node_modules/@prisma/engines/*'
+        - '!nodejs/node_modules/.prisma/**/libquery_engine-*'
+        - 'nodejs/node_modules/.prisma/client/libquery_engine-rhel-openssl-1.0.x.so.node'
+        - '!nodejs/prisma/**'
+        - 'nodejs/prisma/*.db'
+
+package:
+  patterns:
+    - '!node_modules/prisma'
+    - '!node_modules/.prisma'
+    - '!node_modules/@prisma'
+    - '!.prisma-layer'
+    - '!prisma'
+    - '!ci'
+    - '!*.*'
+    - 'index.js'
